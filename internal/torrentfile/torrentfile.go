@@ -57,7 +57,7 @@ func (bi bencodeInfo) hash() ([20]byte, error) {
 }
 
 func (bi bencodeInfo) splitPieceHashes() ([][20]byte, error) {
-	hashLen := 20 // Length of SHA-1 hash
+	hashLen := 20 // length of SHA-1 hash
 	buf := []byte(bi.Pieces)
 	if len(buf)%hashLen != 0 {
 		return nil, fmt.Errorf("received malformed pieces of length %d", len(buf))

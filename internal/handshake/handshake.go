@@ -13,6 +13,16 @@ type Handshake struct {
 	PeerID   [20]byte
 }
 
+// New creates a new handshake with the standard pstr
+func New(infoHash, peerID [20]byte) Handshake {
+	h := Handshake{
+		Pstr:     "BitTorrent protocol",
+		InfoHash: infoHash,
+		PeerID:   peerID,
+	}
+	return h
+}
+
 // Serialize serializes the handshake to a buffer
 func (h Handshake) Serialize() []byte {
 	buf := make([]byte, len(h.Pstr)+49)
@@ -45,13 +55,13 @@ func Read(r io.Reader) (Handshake, error) {
 	pstr := string(handshakeBuf[:pstrLength])
 
 	var infoHash, peerID [20]byte
-	copy(infoHash[:], handshakeBuf[pstrLength+8: pstrLength+8+20])
+	copy(infoHash[:], handshakeBuf[pstrLength+8:pstrLength+8+20])
 	copy(peerID[:], handshakeBuf[pstrLength+8+20:])
 
 	h := Handshake{
-		Pstr: pstr,
+		Pstr:     pstr,
 		InfoHash: infoHash,
-		PeerID: peerID,
+		PeerID:   peerID,
 	}
 	return h, nil
 }
