@@ -53,6 +53,11 @@ func New(peer peer.Peer, infoHash, peerID [20]byte) (*Client, error) {
 	return c, nil
 }
 
+func (c *Client) Read() (*message.Message, error) {
+	msg, err := message.Read(c.Conn)
+	return msg, err
+}
+
 func completeHandshake(conn net.Conn, infoHash, peerID [20]byte) (handshake.Handshake, error) {
 	conn.SetDeadline(time.Now().Add(3 * time.Second))
 	defer conn.SetDeadline(time.Time{}) // Disable the deadline
