@@ -11,7 +11,9 @@ on:
 jobs:
   build:
     name: Build the program
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    needs: test_and_lint
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -26,4 +28,27 @@ jobs:
 
       - name: Build 
         run: go build -o ./bin/torrenter ./cmd/torrenter
-    
+
+  test_and_lint:
+    name: Run tests and linter
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.5"
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.7.2
+
+      - name: Tests
+        run: go test ./...
