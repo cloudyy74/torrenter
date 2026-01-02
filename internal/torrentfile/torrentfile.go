@@ -2,10 +2,12 @@ package torrentfile
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha1"
 	"fmt"
 	"os"
 
+	"github.com/cloudyy74/torrenter/internal/p2p"
 	"github.com/jackpal/bencode-go"
 )
 
@@ -29,6 +31,47 @@ type bencodeInfo struct {
 type bencodeTorrent struct {
 	Announce string      `bencode:"announce"`
 	Info     bencodeInfo `bencode:"info"`
+}
+
+// DownloadToFile downloads a torrent and writes it to a file
+func (t TorrentFile) DownloadToFile(path string) error {
+	var peerID [20]byte
+	_, err := rand.Read(peerID[:])
+	if err != nil {
+		return fmt.Errorf("generate peerID: %w", err)
+	}
+
+	peers, err := t.requestPeers(peerID, 1111)
+	if err != nil {
+		return fmt.Errorf("request peers: %w", err)
+	}
+
+	torrent := p2p.Torrent{
+		Peers:       peers,
+		PeerID:      peerID,
+		InfoHash:    t.InfoHash,
+		PieceHashes: t.PieceHashes,
+		PieceLength: t.PieceLength,
+		Length:      t.Length,
+		Name:        t.Name,
+	}
+
+	buf, err := torrent.Download()
+	if err != nil {
+		return fmt.Errorf("torrent download: %w", err)
+	}
+
+	outFile, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("create file: %w", err)
+	}
+	defer outFile.Close()
+
+	if _, err := outFile.Write(buf); err != nil {
+		return fmt.Errorf("write to file: %w", err)
+	}
+
+	return nil
 }
 
 // Open parses a torrent file

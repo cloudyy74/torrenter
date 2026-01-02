@@ -43,19 +43,68 @@ func New(peer peer.Peer, infoHash, peerID [20]byte) (*Client, error) {
 	}
 
 	c := &Client{
-		Conn: conn,
-		Choked: true,
+		Conn:     conn,
+		Choked:   true,
 		Bitfield: bf,
-		peer: peer,
+		peer:     peer,
 		infoHash: infoHash,
-		peerID: peerID,
+		peerID:   peerID,
 	}
 	return c, nil
 }
 
+// Read reads and consumes a message from the connection
 func (c *Client) Read() (*message.Message, error) {
 	msg, err := message.Read(c.Conn)
-	return msg, err
+	if err != nil {
+		return nil, fmt.Errorf("message read: %w", err)
+	}
+	return msg, nil
+}
+
+// SendRequest sends a Request message to the peer
+func (c *Client) SendRequest(index, begin, length int) error {
+	req := message.FormatRequest(index, begin, length)
+	if _, err := c.Conn.Write(req.Serialize()); err != nil {
+		return fmt.Errorf("conn write: %w", err)
+	}
+	return nil
+}
+
+// SendInterested sends an Interested message to the peer
+func (c *Client) SendInterested() error {
+	msg := message.Message{ID: message.MsgInterested}
+	if _, err := c.Conn.Write(msg.Serialize()); err != nil {
+		return fmt.Errorf("conn write: %w", err)
+	}
+	return nil
+}
+
+// SendNotInterested sends a NotInterested message to the peer
+func (c *Client) SendNotInterested() error {
+	msg := message.Message{ID: message.MsgNotInterested}
+	if _, err := c.Conn.Write(msg.Serialize()); err != nil {
+		return fmt.Errorf("conn write: %w", err)
+	}
+	return nil
+}
+
+// SendUnchoke sends an Unchoke message to the peer
+func (c *Client) SendUnchoke() error {
+	msg := message.Message{ID: message.MsgUnchoke}
+	if _, err := c.Conn.Write(msg.Serialize()); err != nil {
+		return fmt.Errorf("conn write: %w", err)
+	}
+	return nil
+}
+
+// SendHave sends a Have message to the peer
+func (c *Client) SendHave(index int) error {
+	msg := message.FormatHave(index)
+	if _, err := c.Conn.Write(msg.Serialize()); err != nil {
+		return fmt.Errorf("conn write: %w", err)
+	}
+	return nil
 }
 
 func completeHandshake(conn net.Conn, infoHash, peerID [20]byte) (handshake.Handshake, error) {

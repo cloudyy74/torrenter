@@ -9,14 +9,23 @@ import (
 type messageID uint8
 
 const (
+	// MsgChoke chokes the receiver
 	MsgChoke messageID = iota
+	// MsgUnchoke unchokes the receiver
 	MsgUnchoke
+	// MsgInterested expresses interest in receiving data
 	MsgInterested
+	// MsgNotInterested expresses disinterest in receiving data
 	MsgNotInterested
+	// MsgHave alerts the receiver that the sender has downloaded a piece
 	MsgHave
+	// MsgBitfield encodes which pieces that the sender has downloaded
 	MsgBitfield
+	// MsgRequest requests a block of data from the receiver
 	MsgRequest
+	// MsgPiece delivers a block of data to fulfill a request
 	MsgPiece
+	// MsgCancel cancels a request
 	MsgCancel
 )
 
@@ -24,6 +33,72 @@ const (
 type Message struct {
 	ID      messageID
 	Payload []byte
+}
+
+// FormatRequest creates a REQUEST message
+func FormatRequest(index, begin, length int) *Message {
+	payload := make([]byte, 12)
+	binary.BigEndian.PutUint32(payload[0:4], uint32(index))
+	binary.BigEndian.PutUint32(payload[4:8], uint32(begin))
+	binary.BigEndian.PutUint32(payload[8:12], uint32(length))
+	m := &Message{
+		ID:      MsgRequest,
+		Payload: payload,
+	}
+	return m
+}
+
+// FormatHave creates a HAVE message
+func FormatHave(index int) *Message {
+	payload := make([]byte, 4)
+	binary.BigEndian.PutUint32(payload, uint32(index))
+	m := &Message{
+		ID:      MsgHave,
+		Payload: payload,
+	}
+	return m
+}
+
+// ParsePiece parses a PIECE message and copies its payload into a buffer
+func ParsePiece(index int, buf []byte, msg *Message) (int, error) {
+	if msg == nil {
+		return 0, fmt.Errorf("expected piece, got %s", msg)
+	}
+	if msg.ID != MsgPiece {
+		return 0, fmt.Errorf("expected piece (ID = %d), got ID %d", MsgPiece, msg.ID)
+	}
+
+	parsedIndex := int(binary.BigEndian.Uint32(msg.Payload[0:4]))
+	if parsedIndex != index {
+		return 0, fmt.Errorf("expected index %d, got %d", index, parsedIndex)
+	}
+
+	begin := int(binary.BigEndian.Uint32(msg.Payload[4:8]))
+	if begin >= len(buf) {
+		return 0, fmt.Errorf("begin offset too high, %d >= %d", begin, len(buf))
+	}
+
+	data := msg.Payload[8:]
+	if begin+len(data) > len(buf) {
+		return 0, fmt.Errorf("data too long [%d] for offset %d with length %d", len(data), begin, len(buf))
+	}
+
+	copy(buf[begin:], data)
+	return len(data), nil
+}
+
+// ParseHave parses a HAVE message
+func ParseHave(msg *Message) (int, error) {
+	if msg.ID != MsgHave {
+		return 0, fmt.Errorf("expected have (ID = %d), got ID %d", MsgHave, msg.ID)
+	}
+
+	if len(msg.Payload) != 4 {
+		return 0, fmt.Errorf("expected payload length 4, got length %d", len(msg.Payload))
+	}
+
+	index := int(binary.BigEndian.Uint32(msg.Payload))
+	return index, nil
 }
 
 // Serialize serializes a message into a buffer of the form
@@ -55,7 +130,7 @@ func Read(r io.Reader) (*Message, error) {
 	}
 
 	messageBuf := make([]byte, length)
-	if _, err := io.ReadFull(r, lengthBuf); err != nil {
+	if _, err := io.ReadFull(r, messageBuf); err != nil {
 		return nil, fmt.Errorf("read message: %w", err)
 	}
 
@@ -63,7 +138,7 @@ func Read(r io.Reader) (*Message, error) {
 	payload := messageBuf[1:]
 
 	m := &Message{
-		ID: id,
+		ID:      id,
 		Payload: payload,
 	}
 	return m, nil
