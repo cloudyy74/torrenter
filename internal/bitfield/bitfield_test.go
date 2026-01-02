@@ -7,7 +7,7 @@ import (
 
 type hasPieceTest struct {
 	input Bitfield
-	want  []bool    // want[i] is a result for input.HasPiece(i)
+	want  []bool // want[i] is a result for input.HasPiece(i)
 }
 
 type setPieceTest struct {
@@ -17,20 +17,19 @@ type setPieceTest struct {
 }
 
 func TestHasPiece(t *testing.T) {
-	tests := []hasPieceTest {
+	tests := []hasPieceTest{
 		{
 			input: Bitfield{},
-			want: []bool{false, false , false},
+			want:  []bool{false, false, false},
 		},
 		{
 			input: Bitfield{0b10100110},
-			want: []bool{true, false, true, false, false, true, true, false, false, false},
+			want:  []bool{true, false, true, false, false, true, true, false, false, false},
 		},
 		{
 			input: Bitfield{0b01010100, 0b01010100},
-			want: []bool{false, true, false, true, false, true, false, false, false, true, false, true, false, true, false, false, false, false, false, false},
+			want:  []bool{false, true, false, true, false, true, false, false, false, true, false, true, false, true, false, false, false, false, false, false},
 		},
-
 	}
 
 	for _, tt := range tests {
@@ -46,26 +45,26 @@ func TestHasPiece(t *testing.T) {
 }
 
 func TestSetPiece(t *testing.T) {
-	tests := []setPieceTest {
+	tests := []setPieceTest{
 		{
 			input: Bitfield{0b01010100, 0b01010100},
 			index: 4, //                             v (set)
-			want: Bitfield{0b01011100, 0b01010100},
+			want:  Bitfield{0b01011100, 0b01010100},
 		},
 		{
 			input: Bitfield{0b01010100, 0b01010100},
 			index: 9, //                             v (noop)
-			want: Bitfield{0b01010100, 0b01010100},
+			want:  Bitfield{0b01010100, 0b01010100},
 		},
 		{
 			input: Bitfield{0b01010100, 0b01010100},
 			index: 15, //                            v (set)
-			want: Bitfield{0b01010100, 0b01010101},
+			want:  Bitfield{0b01010100, 0b01010101},
 		},
 		{
 			input: Bitfield{0b01010100, 0b01010100},
 			index: 19, //                            v (noop)
-			want: Bitfield{0b01010100, 0b01010100},
+			want:  Bitfield{0b01010100, 0b01010100},
 		},
 	}
 
