@@ -88,7 +88,7 @@ func (t Torrent) calculatePieceSize(index int) int {
 func checkIntegrity(pw pieceWork, buf []byte) error {
 	hash := sha1.Sum(buf)
 	if !bytes.Equal(hash[:], pw.hash[:]) {
-		return fmt.Errorf("Piece #%d failed integrity check", pw.index)
+		return fmt.Errorf("piece #%d failed integrity check", pw.index)
 	}
 	return nil
 }
@@ -101,8 +101,10 @@ func attemptDownloadPiece(c *client.Client, pw pieceWork) ([]byte, error) {
 
 	// setting a deadline helps get unresponsive peers unstuck.
 	// 30 seconds is more than enough time to download a 262 KB piece
-	c.Conn.SetDeadline(time.Now().Add(30 * time.Second))
-	defer c.Conn.SetDeadline(time.Time{})
+	_ = c.Conn.SetDeadline(time.Now().Add(30 * time.Second))
+	defer func() {
+		_ = c.Conn.SetDeadline(time.Time{})
+	}()
 
 	for downloaded < pw.length {
 		// if unchoked, send requests until we have unfulfilled requests
@@ -158,11 +160,19 @@ func (t Torrent) startDownloadWorker(peer peer.Peer, workCh chan pieceWork, resu
 		log.Printf("Could not handshake with %s. Disconnecting\n", peer.IP)
 		return
 	}
-	defer c.Conn.Close()
+	defer func() {
+		_ = c.Conn.Close()
+	}()
 	log.Printf("Completed handshake with %s\n", peer.IP)
 
-	c.SendUnchoke()
-	c.SendInterested()
+	if err := c.SendUnchoke(); err != nil {
+		log.Printf("Could not send unchoke message to %s\n", peer.IP)
+		return
+	}
+	if err := c.SendInterested(); err != nil {
+		log.Printf("Could not send interested message to %s\n", peer.IP)
+		return
+	}
 
 	for pw := range workCh {
 		if !c.Bitfield.HasPiece(pw.index) {
@@ -182,7 +192,9 @@ func (t Torrent) startDownloadWorker(peer peer.Peer, workCh chan pieceWork, resu
 			workCh <- pw // put piece back to the channel
 		}
 
-		c.SendHave(pw.index)
+		if err := c.SendHave(pw.index); err != nil {
+			log.Printf("Could not send have message to %s\n", peer.IP)
+		}
 		resultCh <- pieceResult{pw.index, buf}
 	}
 }

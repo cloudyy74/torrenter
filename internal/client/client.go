@@ -32,13 +32,13 @@ func New(peer peer.Peer, infoHash, peerID [20]byte) (*Client, error) {
 
 	_, err = completeHandshake(conn, infoHash, peerID)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("handshake with peer %s: %w", peer, err)
 	}
 
 	bf, err := recvBitfield(conn)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("receive bitfield from peer %s: %w", peer, err)
 	}
 
@@ -108,8 +108,10 @@ func (c *Client) SendHave(index int) error {
 }
 
 func completeHandshake(conn net.Conn, infoHash, peerID [20]byte) (handshake.Handshake, error) {
-	conn.SetDeadline(time.Now().Add(3 * time.Second))
-	defer conn.SetDeadline(time.Time{}) // Disable the deadline
+	_ = conn.SetDeadline(time.Now().Add(3 * time.Second))
+	defer func() {
+		_ = conn.SetDeadline(time.Time{}) // Disable the deadline
+	}()
 
 	req := handshake.New(infoHash, peerID)
 	_, err := conn.Write(req.Serialize())
@@ -129,8 +131,10 @@ func completeHandshake(conn net.Conn, infoHash, peerID [20]byte) (handshake.Hand
 }
 
 func recvBitfield(conn net.Conn) (bitfield.Bitfield, error) {
-	conn.SetDeadline(time.Now().Add(3 * time.Second))
-	defer conn.SetDeadline(time.Time{}) // Disable the deadline
+	_ = conn.SetDeadline(time.Now().Add(3 * time.Second))
+	defer func() {
+		_ = conn.SetDeadline(time.Time{}) // Disable the deadline
+	}()
 
 	msg, err := message.Read(conn)
 	if err != nil {

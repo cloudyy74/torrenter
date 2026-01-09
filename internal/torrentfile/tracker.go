@@ -46,7 +46,9 @@ func (t TorrentFile) requestPeers(peerID [20]byte, port uint16) ([]peer.Peer, er
 	if err != nil {
 		return nil, fmt.Errorf("http get from tracker: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	var trackerResp bencodeTrackerResp
 	if err := bencode.Unmarshal(resp.Body, &trackerResp); err != nil {

@@ -65,7 +65,9 @@ func (t TorrentFile) DownloadToFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("create file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() {
+		_ = outFile.Close()
+	}()
 
 	if _, err := outFile.Write(buf); err != nil {
 		return fmt.Errorf("write to file: %w", err)
@@ -80,7 +82,9 @@ func Open(path string) (TorrentFile, error) {
 	if err != nil {
 		return TorrentFile{}, fmt.Errorf("open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	bto := bencodeTorrent{}
 	if err := bencode.Unmarshal(file, &bto); err != nil {

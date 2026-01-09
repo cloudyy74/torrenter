@@ -31,7 +31,7 @@ func (h Handshake) Serialize() []byte {
 	cur += copy(buf[cur:], h.Pstr)
 	cur += copy(buf[cur:], make([]byte, 8)) // 8 reserved bytes for extensions (not supported)
 	cur += copy(buf[cur:], h.InfoHash[:])
-	cur += copy(buf[cur:], h.PeerID[:])
+	copy(buf[cur:], h.PeerID[:])
 	return buf
 }
 
